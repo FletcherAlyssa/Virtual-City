@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>艾爾莉露｜官方網站</title>
+    <meta
+      name="description"
+      content="艾爾莉露官方網站：群組簡介、Discord 邀請連結、QR Code、管理人員名單。"
+    />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="艾爾莉露｜官方網站" />
+    <meta
+      property="og:description"
+      content="群組簡介、Discord 邀請連結、QR Code、管理人員名單。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="assets/img/og/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.webmanifest" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/img/logo/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/img/logo/favicon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="assets/img/logo/favicon-512.png" />
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="assets/css/theme.css" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+
+    <!-- Preload (optional fonts) -->
+    <link
+      rel="preload"
+      href="assets/fonts/NotoSansTC-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="assets/fonts/NotoSansTC-Bold.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">跳到主要內容</a>
+
+    <!-- Top Bar -->
+    <header class="topbar" role="banner">
+      <div class="container topbar__inner">
+        <div class="brand">
+          <img class="brand__logo" src="assets/img/logo/logo.svg" alt="艾爾莉露 Logo" />
+          <div class="brand__text">
+            <div class="brand__title" id="siteTitle">艾爾莉露</div>
+            <div class="brand__subtitle" id="siteSubtitle">第十四超算力伺服器所架構的虛擬世界</div>
+          </div>
+        </div>
+
+        <nav class="topnav" aria-label="頁面導覽">
+          <a class="topnav__link" href="#intro">群簡介</a>
+          <a class="topnav__link" href="#join">加入</a>
+          <a class="topnav__link" href="#staff">管理人員</a>
+          <button class="topnav__button" id="openAdminGate" type="button">
+            管理模式
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="main" role="main">
+      <!-- Hero / Notice -->
+      <section class="hero" aria-label="網站總覽">
+        <div class="container hero__inner">
+          <h1 class="hero__headline" id="heroHeadline">艾爾莉露 官方網站</h1>
+          <p class="hero__lead" id="heroLead">
+            本頁提供群組簡介、Discord 邀請連結、QR Code 與管理人員資訊。
+          </p>
+
+          <div class="notice" role="note" aria-live="polite" id="publicNotice">
+            內容成人向，自行斟酌閱讀。
+          </div>
+
+          <div class="hero__actions">
+            <a class="btn btn--primary" id="heroJoinButton" href="#join">前往加入</a>
+            <a class="btn btn--ghost" href="#staff">查看管理人員</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Group Intro -->
+      <section class="section" id="intro" aria-label="群組簡介">
+        <div class="container">
+          <div class="section__header">
+            <h2 class="section__title" id="groupIntroTitle">群組簡介</h2>
+            <p class="section__desc">
+              
+            </p>
+          </div>
+
+          <article class="card card--content">
+            <div class="content" id="groupIntroContent">
+              <!-- Rendered from site.defaults.json content.groupIntroMarkdown -->
+              <p class="muted">載入中……</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Story Background (optional) -->
+      <section class="section" id="story" aria-label="故事背景">
+        <div class="container">
+          <div class="section__header">
+            <h2 class="section__title" id="storyBackgroundTitle">故事背景</h2>
+            <p class="section__desc">
+              
+            </p>
+          </div>
+
+          <article class="card card--content">
+            <div class="content" id="storyBackgroundContent">
+              <p class="muted">載入中……</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Join / Invite -->
+      <section class="section" id="join" aria-label="加入 Discord">
+        <div class="container">
+          <div class="section__header">
+            <h2 class="section__title">加入 Discord</h2>
+            <p class="section__desc">
+              你可以點擊邀請連結加入，或使用 QR Code 掃描加入。
+            </p>
+          </div>
+
+          <div class="grid grid--2">
+            <div class="card">
+              <div class="card__header">
+                <h3 class="card__title">邀請連結</h3>
+                <p class="card__subtitle">可一鍵開啟或複製</p>
+              </div>
+
+              <div class="card__body">
+                <div class="invite">
+                  <a
+                    class="invite__link"
+                    id="discordInviteLink"
+                    href="https://discord.gg/H5sMYttJ38"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    https://discord.gg/H5sMYttJ38
+                  </a>
+
+                  <div class="invite__actions">
+                    <button class="btn btn--secondary" type="button" id="copyInviteLink">
+                      複製連結
+                    </button>
+                    <a
+                      class="btn btn--primary"
+                      id="openInviteLink"
+                      href="https://discord.gg/H5sMYttJ38"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      開啟 Discord
+                    </a>
+                  </div>
+
+                  <p class="hint" id="copyStatus" aria-live="polite"></p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header">
+                <h3 class="card__title">QR Code</h3>
+                <p class="card__subtitle">使用手機相機/QR 掃描器</p>
+              </div>
+
+              <div class="card__body">
+                <figure class="qr">
+                  <img
+                    class="qr__img"
+                    id="qrImage"
+                    src="assets/img/qr/discord-invite.png"
+                    alt="Discord 邀請連結 QR Code"
+                    loading="lazy"
+                  />
+                  <figcaption class="qr__caption muted" id="qrCaption">
+                    掃描以加入 Discord 群組
+                  </figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Staff -->
+      <section class="section" id="staff" aria-label="管理人員">
+        <div class="container">
+          <div class="section__header">
+            <h2 class="section__title">管理人員</h2>
+            <p class="section__desc">
+              由站內管理模式維護名單、簡介、頭像（URL）與排序。
+            </p>
+          </div>
+
+          <div class="toolbar" aria-label="管理人員工具列">
+            <div class="toolbar__left">
+              <span class="muted" id="staffCount">0 位</span>
+            </div>
+            <div class="toolbar__right">
+              <button class="btn btn--ghost" type="button" id="openAdminGateInline">
+                進入管理模式
+              </button>
+            </div>
+          </div>
+
+          <div class="staff-grid" id="staffGrid" aria-live="polite">
+            <!-- Staff cards rendered here -->
+            <div class="empty-state" id="staffEmptyState">
+              <p class="muted">目前尚未設定管理人員。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="footer" role="contentinfo">
+        <div class="container footer__inner">
+          <div class="footer__left">
+            <span class="muted" id="footerTitle">艾爾莉露</span>
+            <span class="footer__sep">·</span>
+            <span class="muted" id="footerNote">官方網站</span>
+          </div>
+          <div class="footer__right">
+            <button class="linklike" type="button" id="scrollToTop">回到頂部</button>
+          </div>
+        </div>
+      </footer>
+    </main>
+
+    <!-- Admin Gate Modal (unlock with 8-digit code) -->
+    <dialog class="modal" id="adminGateModal" aria-labelledby="adminGateTitle">
+      <form method="dialog" class="modal__panel" id="adminGateForm">
+        <header class="modal__header">
+          <h2 class="modal__title" id="adminGateTitle">管理模式</h2>
+          <button class="icon-btn" type="submit" value="cancel" aria-label="關閉">
+            ×
+          </button>
+        </header>
+
+        <div class="modal__body">
+          <p class="muted">
+            請輸入 8 位數字以解鎖管理功能（新增/編輯/排序管理人員）。
+          </p>
+
+          <label class="field">
+            <span class="field__label">8 位數字</span>
+            <input
+              class="field__input"
+              id="adminCodeInput"
+              type="password"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              minlength="8"
+              maxlength="8"
+              placeholder="********"
+              aria-describedby="adminCodeHelp"
+              required
+            />
+            <span class="field__help" id="adminCodeHelp">輸入後將在本機解鎖管理面板。</span>
+          </label>
+
+          <p class="error" id="adminGateError" aria-live="polite"></p>
+        </div>
+
+        <footer class="modal__footer">
+          <button class="btn btn--secondary" type="submit" value="cancel">
+            取消
+          </button>
+          <button class="btn btn--primary" type="button" id="unlockAdmin">
+            解鎖
+          </button>
+        </footer>
+      </form>
+    </dialog>
+
+    <!-- Admin Panel (hidden until unlocked) -->
+    <section
+      class="admin"
+      id="adminPanel"
+      aria-label="管理面板"
+      aria-hidden="true"
+    >
+      <div class="container admin__inner">
+        <div class="admin__header">
+          <h2 class="admin__title">管理面板</h2>
+          <div class="admin__actions">
+            <button class="btn btn--secondary" type="button" id="exportDataBtn">
+              匯出資料
+            </button>
+            <button class="btn btn--ghost" type="button" id="lockAdminBtn">
+              鎖定
+            </button>
+          </div>
+        </div>
+
+        <div class="admin__grid">
+          <!-- Staff Editor -->
+          <div class="card">
+            <div class="card__header">
+              <h3 class="card__title">新增 / 編輯管理人員</h3>
+              <p class="card__subtitle">頭像採 URL 模式；可留空使用預設頭像。</p>
+            </div>
+
+            <div class="card__body">
+              <form class="form" id="staffForm">
+                <input type="hidden" id="staffId" value="" />
+
+                <label class="field">
+                  <span class="field__label">暱稱</span>
+                  <input class="field__input" id="staffName" type="text" maxlength="40" required />
+                </label>
+
+                <label class="field">
+                  <span class="field__label">簡介</span>
+                  <textarea
+                    class="field__input"
+                    id="staffBio"
+                    rows="4"
+                    maxlength="200"
+                    placeholder="（可填寫職責、風格、聯絡方式等）"
+                    required
+                  ></textarea>
+                </label>
+
+                <label class="field">
+                  <span class="field__label">頭像 URL</span>
+                  <input
+                    class="field__input"
+                    id="staffAvatarUrl"
+                    type="url"
+                    placeholder="https://..."
+                  />
+                  <span class="field__help">建議使用 HTTPS 圖片連結；載入失敗會自動回退預設頭像。</span>
+                </label>
+
+                <div class="form__actions">
+                  <button class="btn btn--primary" type="submit" id="saveStaffBtn">
+                    儲存
+                  </button>
+                  <button class="btn btn--secondary" type="button" id="resetStaffFormBtn">
+                    清空
+                  </button>
+                </div>
+
+                <p class="hint" id="staffFormStatus" aria-live="polite"></p>
+              </form>
+            </div>
+          </div>
+
+          <!-- Staff Order / List -->
+          <div class="card">
+            <div class="card__header">
+              <h3 class="card__title">排序與列表</h3>
+              <p class="card__subtitle">拖曳或使用按鈕調整先後；可編輯或刪除。</p>
+            </div>
+
+            <div class="card__body">
+              <div class="admin-list" id="adminStaffList" aria-live="polite">
+                <!-- Admin staff rows rendered here -->
+                <div class="empty-state" id="adminStaffEmptyState">
+                  <p class="muted">尚無管理人員。請先於左側表單新增。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Import (optional container, not required to use) -->
+        <div class="card admin__bottom">
+          <div class="card__header">
+            <h3 class="card__title">資料匯入（可選）</h3>
+            <p class="card__subtitle">若需跨裝置遷移，可匯入先前匯出的 JSON。</p>
+          </div>
+          <div class="card__body">
+            <input class="field__input" id="importFileInput" type="file" accept="application/json" />
+            <div class="form__actions">
+              <button class="btn btn--secondary" type="button" id="importDataBtn">
+                匯入
+              </button>
+              <button class="btn btn--ghost" type="button" id="resetLocalDataBtn">
+                重置本機資料
+              </button>
+            </div>
+            <p class="hint" id="importStatus" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scripts -->
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/storage.js"></script>
+    <script src="assets/js/admin-panel.js"></script>
+    <script src="assets/js/app.js"></script>
+
+    <noscript>
+      <div class="noscript container">
+        管理人員維護
+      </div>
+    </noscript>
+  </body>
+</html>
