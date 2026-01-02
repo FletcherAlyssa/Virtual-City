@@ -1,6 +1,6 @@
-/* admin-panel.js — robust admin launcher + remote staff sync
-   Requires: utils.js, storage.js
-   Exposes: window.Eirlylu.admin.init()
+/* admin-panel.js — Admin UI + remote staff sync (Worker KV)
+   - Uses unique IDs (admin_*), so it will not collide with existing markup.
+   - Requires: utils.js, storage.js
 */
 (() => {
   "use strict";
@@ -16,9 +16,7 @@
     return (len ? t.length === len : true) && /^[0-9]+$/.test(t);
   });
 
-  if (!U || !S) {
-    console.warn("[admin-panel] missing utils or storage (check script order).");
-  }
+  if (!S) return;
 
   let pinInMemory = "";
   let staffList = [];
@@ -79,7 +77,7 @@
       const info = document.createElement("div");
       const name = document.createElement("div");
       name.style.fontWeight = "700";
-      name.textContent = s.nickname || "（未命名）";
+      name.textContent = s.nickname || "(未命名)";
       const intro = document.createElement("div");
       intro.style.marginTop = "4px";
       intro.style.color = "var(--muted)";
@@ -134,7 +132,6 @@
 
       actions.append(btnUp, btnDown, btnDel);
       row.appendChild(actions);
-
       box.appendChild(row);
     });
   }
@@ -144,18 +141,15 @@
       if (!pinInMemory || !isDigits(pinInMemory, 8)) {
         await S.saveStaff(staffList, { pin: "" });
         setMsg("已更新本機快取（未提供有效 PIN，未同步到雲端）。");
-        window.dispatchEvent(new CustomEvent("eirlylu:staff-updated"));
         return;
       }
       await S.saveStaff(staffList, { pin: pinInMemory });
       setMsg("已同步更新（所有端刷新後一致）。");
-      window.dispatchEvent(new CustomEvent("eirlylu:staff-updated"));
     } catch (e) {
       const m = String(e?.message || e);
       if (m.includes("UNAUTHORIZED")) setMsg("PIN 不正確，無法寫入雲端。", true);
       else setMsg("寫入雲端失敗，已保留本機快取。", true);
       try { await S.saveStaff(staffList, { pin: "" }); } catch {}
-      window.dispatchEvent(new CustomEvent("eirlylu:staff-updated"));
     }
   }
 
@@ -165,7 +159,9 @@
     renderList();
   }
 
-  function ensureDialog() {
+  function injectDialogIfNeeded() {
+    // If you already have your own admin UI, you can delete/disable this injection,
+    // but this version avoids ID collisions by using admin_*.
     let dlg = qs("#adminDialog");
     if (dlg) return dlg;
 
@@ -222,46 +218,34 @@
     return dlg;
   }
 
-  function findOrCreateOpenButton() {
-    // Try to bind existing buttons first
-    let btn =
-      qs('[data-action="open-admin"]') ||
-      qs("#adminOpen") ||
-      qs("#btnAdmin") ||
-      qs("#adminMode");
+  function ensureOpenButton(dlg) {
+    let btn = qs("#adminOpen");
+    if (btn) return btn;
 
-    if (!btn) {
-      btn = document.createElement("button");
-      btn.id = "adminOpen";
-      btn.className = "btn";
-      btn.textContent = "管理";
-      btn.style.position = "fixed";
-      btn.style.right = "14px";
-      btn.style.bottom = "14px";
-      btn.style.zIndex = "20";
-      document.body.appendChild(btn);
-    }
+    btn = document.createElement("button");
+    btn.id = "adminOpen";
+    btn.className = "btn";
+    btn.textContent = "管理";
+    btn.style.position = "fixed";
+    btn.style.right = "14px";
+    btn.style.bottom = "14px";
+    btn.style.zIndex = "20";
+    document.body.appendChild(btn);
+
+    btn.onclick = async () => {
+      if (typeof dlg.showModal === "function") dlg.showModal();
+      else dlg.setAttribute("open", "open");
+      await reloadStaff();
+      setMsg("已從雲端載入（或使用本機快取）。");
+    };
+
     return btn;
   }
 
-  async function openPanel(dlg) {
-    try {
-      await reloadStaff();
-      setMsg("已從雲端載入（或使用本機快取）。");
-    } catch {
-      setMsg("載入失敗，已使用本機快取。", true);
-      try {
-        staffList = await S.loadStaff({ preferRemote: false });
-        normalizeOrder();
-        renderList();
-      } catch {}
-    }
+  async function init() {
+    const dlg = injectDialogIfNeeded();
+    ensureOpenButton(dlg);
 
-    if (typeof dlg.showModal === "function") dlg.showModal();
-    else dlg.setAttribute("open", "open");
-  }
-
-  function wireDialogEvents(dlg) {
     const pinEl = qs("#admin_pin", dlg);
     pinEl.addEventListener("input", () => {
       const v = safeText(pinEl.value, 16);
@@ -291,24 +275,10 @@
       await reloadStaff();
       setMsg("已重新載入。");
     };
+
+    // initial preload (non-blocking)
+    try { await reloadStaff(); } catch {}
   }
 
-  function init() {
-    const dlg = ensureDialog();
-    const btn = findOrCreateOpenButton();
-
-    // Avoid double-binding if init called twice
-    if (!btn.dataset.adminBound) {
-      btn.dataset.adminBound = "1";
-      btn.addEventListener("click", () => openPanel(dlg));
-    }
-
-    wireDialogEvents(dlg);
-  }
-
-  // Expose for app.js (optional)
-  E.admin = { init };
-
-  // Auto-init
   document.addEventListener("DOMContentLoaded", init);
 })();
