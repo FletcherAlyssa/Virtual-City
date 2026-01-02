@@ -51,12 +51,12 @@
     // Content sections (Markdown)
     setText("#groupIntroTitle", siteDefaults?.content?.groupIntroTitle || "群組簡介");
     const introMd = siteDefaults?.content?.groupIntroMarkdown || "";
-    const introHtml = markdownToHtml(introMd) || `<p class="muted">本群為科幻與幻想混合風格的語 C 創作群，主軸圍繞「虛擬世界」、「階級秩序」與「心智可被改寫」等題材。\n\n### 玩法概要\n- 你將以「轉生」方式建立並扮演一名住民角色（人族 / 亞人 / 魔族等）。\n- 在艾爾莉露，個體由代碼構成；人格、記憶與行為可能因事件而受到干預或修復。</p>`;
+    const introHtml = markdownToHtml(introMd) || `<p class="muted">本群為科幻與幻想混合風格的語 C 創作群，主軸圍繞「虛擬世界」、「階級秩序」與「心智可被改寫」等題材。\n\n 你將以「轉生」方式建立並扮演一名住民角色（人族 / 亞人 / 魔族等）。\n 在艾爾莉露，個體由代碼構成；人格、記憶與行為可能因事件而受到干預或修復。</p>`;
     setHtml("#groupIntroContent", introHtml);
 
     setText("#storyBackgroundTitle", siteDefaults?.content?.storyBackgroundTitle || "故事背景");
     const storyMd = siteDefaults?.content?.storyBackgroundMarkdown || "";
-    const storyHtml = markdownToHtml(storyMd) || `<p class="muted">故事發生於 23 世紀的平行宇宙。人類科技跨越奇異點後突飛猛進，最終以「意識上傳」形式實現了近似永生：將精神/靈魂剝離肉體，投入由超算伺服器承載的虛擬世界中生活。\n\n### 艾爾莉露（第十四超算力伺服器）\n艾爾莉露表面由一名公主擁有，實際由其背後的富商掌控。為擴張人口與維持秩序，世界被設計為明確的階級社會並允許管理者制定規則。</p>`;
+    const storyHtml = markdownToHtml(storyMd) || `<p class="muted">故事發生於 23 世紀的平行宇宙。人類科技跨越奇異點後突飛猛進，最終以「意識上傳」形式實現了近似永生：將精神/靈魂剝離肉體，投入由超算伺服器承載的虛擬世界中生活。\n\n 艾爾莉露表面由一名公主擁有，實際由其背後的富商掌控。為擴張人口與維持秩序，世界被設計為明確的階級社會並允許管理者制定規則。</p>`;
     setHtml("#storyBackgroundContent", storyHtml);
 
     // Discord invite
