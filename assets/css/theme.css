@@ -1,121 +1,40 @@
-/* theme.css
-   - Global tokens (CSS variables)
-   - Light/Dark theme baseline
-   - Typography + spacing scale
+/* theme.css — Style #4: Pink/Violet glass + hypnotic ambience
+   Drop-in replacement: keep file name the same.
 */
-
-:root {
+:root{
   /* Typography */
-  --font-sans: "Noto Sans TC", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-
-  --text-xs: 0.8125rem;  /* 13 */
-  --text-sm: 0.875rem;   /* 14 */
-  --text-md: 1rem;       /* 16 */
-  --text-lg: 1.125rem;   /* 18 */
-  --text-xl: 1.375rem;   /* 22 */
-  --text-2xl: 1.75rem;   /* 28 */
-  --text-3xl: 2.125rem;  /* 34 */
-
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", Arial, sans-serif;
   --line: 1.6;
 
-  /* Spacing */
-  --sp-1: 0.25rem;
-  --sp-2: 0.5rem;
-  --sp-3: 0.75rem;
-  --sp-4: 1rem;
-  --sp-5: 1.25rem;
-  --sp-6: 1.5rem;
-  --sp-8: 2rem;
-  --sp-10: 2.5rem;
-  --sp-12: 3rem;
-  --sp-16: 4rem;
-
-  /* Radius */
-  --r-1: 8px;
-  --r-2: 12px;
-  --r-3: 16px;
-
-  /* Shadows */
-  --shadow-1: 0 8px 24px rgba(0, 0, 0, 0.18);
-  --shadow-2: 0 12px 36px rgba(0, 0, 0, 0.24);
-
-  /* Layout */
-  --container: 1100px;
-
-  /* Transitions */
+  /* Radius & motion */
+  --r-1: 10px;
+  --r-2: 14px;
+  --r-3: 18px;
   --t-fast: 120ms;
   --t-med: 180ms;
-  --ease: cubic-bezier(0.2, 0.9, 0.2, 1);
+  --ease: cubic-bezier(.2,.8,.2,1);
 
-  /* Focus */
-  --focus: 2px solid rgba(120, 170, 255, 0.85);
-  --focus-offset: 2px;
+  /* Color system — tuned for professional pink/violet glassmorphism */
+  --bg: #0b0912;
+  --bg-2: #0f0b1b;
+  --text: rgba(245,246,250,0.92);
+  --muted: rgba(205,210,225,0.70);
 
-  /* Brand accent (pink/violet) */
-  --accent: rgba(255, 120, 190, 0.95);
+  /* Glass panels */
+  --panel: rgba(255,255,255,0.07);
+  --panel-2: rgba(255,255,255,0.10);
+  --border: rgba(255,255,255,0.12);
+
+  /* Accents */
+  --accent: rgba(255, 120, 190, 0.96);      /* pink */
   --accent-weak: rgba(255, 120, 190, 0.22);
-
-  /* Optional secondary accent (violet) */
-  --accent-2: rgba(185, 130, 255, 0.85);
+  --accent-2: rgba(185, 130, 255, 0.88);    /* violet */
   --accent-2-weak: rgba(185, 130, 255, 0.18);
-}
 
-/* Default = dark-ish, matches manifest theme_color */
-:root {
-  --bg: #0b0c10;
-  --bg-2: #11131a;
-  --panel: rgba(255, 255, 255, 0.06);
-  --panel-2: rgba(255, 255, 255, 0.085);
-  --border: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.18);
+  /* Shadows */
+  --shadow-1: 0 10px 26px rgba(0,0,0,0.30);
+  --shadow-2: 0 18px 46px rgba(0,0,0,0.42);
 
-  --text: rgba(255, 255, 255, 0.92);
-  --text-2: rgba(255, 255, 255, 0.72);
-  --muted: rgba(255, 255, 255, 0.62);
-
-  --danger: rgba(255, 130, 130, 0.92);
-  --danger-weak: rgba(255, 130, 130, 0.20);
-  --ok: rgba(150, 235, 190, 0.95);
-  --ok-weak: rgba(150, 235, 190, 0.18);
-}
-
-/* Light theme when explicitly set on <html data-theme="light"> */
-html[data-theme="light"] {
-  --bg: #f7f8fb;
-  --bg-2: #eef1f6;
-  --panel: rgba(0, 0, 0, 0.04);
-  --panel-2: rgba(0, 0, 0, 0.065);
-  --border: rgba(0, 0, 0, 0.10);
-  --border-strong: rgba(0, 0, 0, 0.16);
-
-  --text: rgba(0, 0, 0, 0.86);
-  --text-2: rgba(0, 0, 0, 0.70);
-  --muted: rgba(0, 0, 0, 0.56);
-
-  --danger: rgba(200, 30, 30, 0.92);
-  --danger-weak: rgba(200, 30, 30, 0.12);
-  --ok: rgba(0, 140, 85, 0.92);
-  --ok-weak: rgba(0, 140, 85, 0.10);
-}
-
-/* Auto theme uses OS preference; JS can set data-theme="auto" or omit entirely */
-@media (prefers-color-scheme: light) {
-  html:not([data-theme="dark"]) {
-    --bg: #f7f8fb;
-    --bg-2: #eef1f6;
-    --panel: rgba(0, 0, 0, 0.04);
-    --panel-2: rgba(0, 0, 0, 0.065);
-    --border: rgba(0, 0, 0, 0.10);
-    --border-strong: rgba(0, 0, 0, 0.16);
-
-    --text: rgba(0, 0, 0, 0.86);
-    --text-2: rgba(0, 0, 0, 0.70);
-    --muted: rgba(0, 0, 0, 0.56);
-
-    --danger: rgba(200, 30, 30, 0.92);
-    --danger-weak: rgba(200, 30, 30, 0.12);
-    --ok: rgba(0, 140, 85, 0.92);
-    --ok-weak: rgba(0, 140, 85, 0.10);
-  }
+  /* Focus ring */
+  --focus: 0 0 0 3px rgba(255,120,190,0.22), 0 0 0 1px rgba(255,120,190,0.28);
 }
