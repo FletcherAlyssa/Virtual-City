@@ -55,8 +55,9 @@
     return s.length > maxLen ? s.slice(0, maxLen) : s;
   }
 
- function randomId() {
+  function randomId() {
     if (crypto && crypto.randomUUID) return crypto.randomUUID();
+    // Fallback
     return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   }
 
@@ -79,6 +80,7 @@
       // fall through
     }
 
+    // Fallback: temporary textarea
     try {
       const ta = document.createElement("textarea");
       ta.value = t;
@@ -127,17 +129,19 @@
   }
 
   /**
-   * Safe Markdown subset renderer (no raw HTML)
+   * Very small, safe Markdown subset renderer.
    * Supports:
    * - Paragraphs
    * - Headings: ###, ####
    * - Lists: -, *, 1.
    * - Inline: **bold**, *italic*, `code`, [text](url)
+   * Disallows raw HTML (escaped).
    */
   function markdownToHtml(md) {
     const src = String(md ?? "");
     if (!src.trim()) return "";
 
+    // Escape first to prevent HTML injection, then add markup via replacements.
     const lines = src.replace(/\r\n/g, "\n").split("\n");
 
     const out = [];
@@ -158,20 +162,22 @@
     const renderInline = (text) => {
       let s = escapeHtml(text);
 
-      // inline code
+      // Inline code: `code`
       s = s.replace(/`([^`]+)`/g, (_m, g1) => `<code>${escapeHtml(g1)}</code>`);
 
-      // bold
+      // Bold: **text**
       s = s.replace(/\*\*([^*]+)\*\*/g, (_m, g1) => `<strong>${g1}</strong>`);
 
-      // italic (avoid matching inside **)
+      // Italic: *text* (avoid matching within **)
       s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, (_m, p1, g2) => `${p1}<em>${g2}</em>`);
 
-      // links: [text](url)  (http/https only)
+      // Links: [text](url) - only allow http/https
       s = s.replace(/$begin:math:display$\(\[\^$end:math:display$]+)\]$begin:math:text$\(\[\^\)\]\+\)$end:math:text$/g, (_m, txt, url) => {
         const u = String(url).trim();
-        if (!isValidHttpUrl(u)) return `${escapeHtml(txt)} (${escapeHtml(u)})`;
-        return `<a href="${escapeHtml(u)}" target="_blank" rel="noopener noreferrer">${escapeHtml(txt)}</a>`;
+        if (!isValidHttpUrl(u)) return `${txt} (${escapeHtml(u)})`;
+        const safeU = escapeHtml(u);
+        const safeT = txt; // already escaped in s, but we are in post-escape string; txt from regex is raw. Escape:
+        return `<a href="${safeU}" target="_blank" rel="noopener noreferrer">${escapeHtml(safeT)}</a>`;
       });
 
       return s;
@@ -185,6 +191,7 @@
         continue;
       }
 
+      // Headings
       if (line.startsWith("#### ")) {
         closeLists();
         out.push(`<h4>${renderInline(line.slice(5))}</h4>`);
@@ -196,6 +203,7 @@
         continue;
       }
 
+      // Unordered list
       if (/^[-*]\s+/.test(line)) {
         if (inOl) {
           out.push("</ol>");
@@ -209,6 +217,7 @@
         continue;
       }
 
+      // Ordered list
       if (/^\d+\.\s+/.test(line)) {
         if (inUl) {
           out.push("</ul>");
@@ -222,6 +231,7 @@
         continue;
       }
 
+      // Paragraph
       closeLists();
       out.push(`<p>${renderInline(line)}</p>`);
     }
