@@ -1,0 +1,22 @@
+{
+  "name": "艾爾莉露 官方網站",
+  "short_name": "艾爾莉露",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b0c10",
+  "theme_color": "#0b0c10",
+  "lang": "zh-Hant",
+  "icons": [
+    {
+      "src": "assets/img/logo/favicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/img/logo/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
