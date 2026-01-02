@@ -1,284 +1,415 @@
-/* admin-panel.js — Admin UI + remote staff sync (Worker KV)
-   - Uses unique IDs (admin_*), so it will not collide with existing markup.
-   - Requires: utils.js, storage.js
+/* admin-panel.js — binds to existing HTML admin gate + panel
+Requires: utils.js, storage.js
+Exposes: window.Eirlylu.admin.init()
 */
 (() => {
-  "use strict";
+"use strict";
 
-  const E = (window.Eirlylu ||= {});
-  const U = E.utils || {};
-  const S = E.storage;
+const E = (window.Eirlylu ||= {});
+const U = E.utils || {};
+const S = E.storage;
 
-  const qs = U.qs || ((sel, root = document) => root.querySelector(sel));
-  const safeText = U.safeText || ((s, n = 2000) => String(s ?? "").trim().slice(0, n));
-  const isDigits = U.isDigits || ((s, len) => {
-    const t = String(s ?? "");
-    return (len ? t.length === len : true) && /^[0-9]+$/.test(t);
-  });
+if (!S) return;
 
-  if (!S) return;
+const qs = U.qs || ((sel, root = document) => root.querySelector(sel));
+const safeText = U.safeText || ((s, n = 2000) => String(s ?? "").trim().slice(0, n));
+const isDigits = U.isDigits || ((s, len) => {
+const t = String(s ?? "");
+return (len ? t.length === len : true) && /^[0-9]+$/.test(t);
+});
+const normalizeUrl = U.normalizeUrl || ((u) => String(u ?? "").trim());
+const randomId = U.randomId || (() => `id_${Date.now()}_${Math.random().toString(16).slice(2)}`);
+const downloadJson = U.downloadJson || ((name, obj) => {
+const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+const url = URL.createObjectURL(blob);
+const a = document.createElement("a");
+a.href = url;
+a.download = name || "export.json";
+document.body.appendChild(a);
+a.click();
+a.remove();
+URL.revokeObjectURL(url);
+});
+const readJsonFile = U.readJsonFile || ((file) => new Promise((resolve, reject) => {
+const r = new FileReader();
+r.onload = () => { try { resolve(JSON.parse(String(r.result || ""))); } catch (e) { reject(e); } };
+r.onerror = () => reject(r.error || new Error("File read error"));
+r.readAsText(file);
+}));
 
-  let pinInMemory = "";
-  let staffList = [];
+// State
+let pinInMemory = "";
+let staffList = [];
 
-  function setMsg(text, isError = false) {
-    const el = qs("#admin_msg");
-    if (!el) return;
-    el.textContent = text || "";
-    el.style.color = isError ? "rgba(255,150,170,0.95)" : "var(--muted)";
-  }
+// Session keys (unlock only this tab session)
+const SS_UNLOCK = "eirlylu.admin.unlocked.v1";
+const SS_PIN = "eirlylu.admin.pin.v1";
 
-  function normalizeOrder() {
-    staffList.forEach((x, i) => { x.order = i; x.updatedAt = new Date().toISOString(); });
-  }
+function showGate() {
+const dlg = qs("#adminGateModal");
+const input = qs("#adminCodeInput");
+const err = qs("#adminGateError");
+if (!dlg) return;
 
-  function renderList() {
-    const box = qs("#admin_staffList");
-    if (!box) return;
-    box.innerHTML = "";
+if (err) err.textContent = "";
+if (input) input.value = "";
 
-    if (!staffList.length) {
-      const empty = document.createElement("div");
-      empty.className = "card";
-      empty.style.padding = "12px";
-      empty.style.color = "var(--muted)";
-      empty.textContent = "尚未新增管理人員。";
-      box.appendChild(empty);
-      return;
-    }
+if (typeof dlg.showModal === "function") dlg.showModal();
+else dlg.setAttribute("open", "open");
+if (input) setTimeout(() => input.focus(), 50);
+}
 
-    staffList.forEach((s, idx) => {
-      const row = document.createElement("div");
-      row.className = "card";
-      row.style.padding = "12px";
-      row.style.display = "grid";
-      row.style.gridTemplateColumns = "48px 1fr auto";
-      row.style.gap = "12px";
-      row.style.alignItems = "center";
+function hideGate() {
+const dlg = qs("#adminGateModal");
+if (!dlg) return;
+if (typeof dlg.close === "function") dlg.close();
+else dlg.removeAttribute("open");
+}
 
-      const avatar = document.createElement("div");
-      avatar.style.width = "48px";
-      avatar.style.height = "48px";
-      avatar.style.borderRadius = "14px";
-      avatar.style.overflow = "hidden";
-      avatar.style.background = "rgba(255,255,255,0.06)";
-      avatar.style.border = "1px solid rgba(255,255,255,0.10)";
-      if (s.avatarUrl) {
-        const img = document.createElement("img");
-        img.src = s.avatarUrl;
-        img.alt = "";
-        img.style.width = "100%";
-        img.style.height = "100%";
-        img.style.objectFit = "cover";
-        avatar.appendChild(img);
-      }
-      row.appendChild(avatar);
+function showPanel() {
+const panel = qs("#adminPanel");
+if (!panel) return;
+panel.classList.add("is-visible");
+panel.setAttribute("aria-hidden", "false");
+panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
-      const info = document.createElement("div");
-      const name = document.createElement("div");
-      name.style.fontWeight = "700";
-      name.textContent = s.nickname || "(未命名)";
-      const intro = document.createElement("div");
-      intro.style.marginTop = "4px";
-      intro.style.color = "var(--muted)";
-      intro.style.fontSize = "0.92rem";
-      intro.textContent = s.intro || "";
-      info.appendChild(name);
-      info.appendChild(intro);
-      row.appendChild(info);
+function hidePanel() {
+const panel = qs("#adminPanel");
+if (!panel) return;
+panel.classList.remove("is-visible");
+panel.setAttribute("aria-hidden", "true");
+}
 
-      const actions = document.createElement("div");
-      actions.style.display = "flex";
-      actions.style.gap = "8px";
-      actions.style.flexWrap = "wrap";
-      actions.style.justifyContent = "flex-end";
+function setGateError(msg) {
+const err = qs("#adminGateError");
+if (err) err.textContent = msg || "";
+}
 
-      const btnUp = document.createElement("button");
-      btnUp.type = "button";
-      btnUp.className = "btn";
-      btnUp.textContent = "上移";
-      btnUp.disabled = idx === 0;
-      btnUp.onclick = async () => {
-        const [x] = staffList.splice(idx, 1);
-        staffList.splice(idx - 1, 0, x);
-        normalizeOrder();
-        renderList();
-        await persist();
-      };
+function setStaffFormStatus(msg, isError = false) {
+const el = qs("#staffFormStatus");
+if (!el) return;
+el.textContent = msg || "";
+el.style.color = isError ? "rgba(255,120,150,0.95)" : "";
+}
 
-      const btnDown = document.createElement("button");
-      btnDown.type = "button";
-      btnDown.className = "btn";
-      btnDown.textContent = "下移";
-      btnDown.disabled = idx === staffList.length - 1;
-      btnDown.onclick = async () => {
-        const [x] = staffList.splice(idx, 1);
-        staffList.splice(idx + 1, 0, x);
-        normalizeOrder();
-        renderList();
-        await persist();
-      };
+function setImportStatus(msg, isError = false) {
+const el = qs("#importStatus");
+if (!el) return;
+el.textContent = msg || "";
+el.style.color = isError ? "rgba(255,120,150,0.95)" : "";
+}
 
-      const btnDel = document.createElement("button");
-      btnDel.type = "button";
-      btnDel.className = "btn";
-      btnDel.textContent = "刪除";
-      btnDel.onclick = async () => {
-        staffList.splice(idx, 1);
-        normalizeOrder();
-        renderList();
-        await persist();
-      };
+function normalizeOrder() {
+staffList.forEach((x, i) => {
+x.order = i;
+x.updatedAt = new Date().toISOString();
+});
+}
 
-      actions.append(btnUp, btnDown, btnDel);
-      row.appendChild(actions);
-      box.appendChild(row);
-    });
-  }
+function clearStaffForm() {
+const idEl = qs("#staffId");
+const nameEl = qs("#staffName");
+const bioEl = qs("#staffBio");
+const avEl = qs("#staffAvatarUrl");
+if (idEl) idEl.value = "";
+if (nameEl) nameEl.value = "";
+if (bioEl) bioEl.value = "";
+if (avEl) avEl.value = "";
+setStaffFormStatus("");
+}
 
-  async function persist() {
-    try {
-      if (!pinInMemory || !isDigits(pinInMemory, 8)) {
-        await S.saveStaff(staffList, { pin: "" });
-        setMsg("已更新本機快取（未提供有效 PIN，未同步到雲端）。");
-        return;
-      }
-      await S.saveStaff(staffList, { pin: pinInMemory });
-      setMsg("已同步更新（所有端刷新後一致）。");
-    } catch (e) {
-      const m = String(e?.message || e);
-      if (m.includes("UNAUTHORIZED")) setMsg("PIN 不正確，無法寫入雲端。", true);
-      else setMsg("寫入雲端失敗，已保留本機快取。", true);
-      try { await S.saveStaff(staffList, { pin: "" }); } catch {}
-    }
-  }
+function fillStaffForm(item) {
+const idEl = qs("#staffId");
+const nameEl = qs("#staffName");
+const bioEl = qs("#staffBio");
+const avEl = qs("#staffAvatarUrl");
+if (idEl) idEl.value = item?.id || "";
+if (nameEl) nameEl.value = item?.nickname || "";
+if (bioEl) bioEl.value = item?.intro || "";
+if (avEl) avEl.value = item?.avatarUrl || "";
+setStaffFormStatus("");
+}
 
-  async function reloadStaff() {
-    staffList = await S.loadStaff({ preferRemote: true });
-    normalizeOrder();
-    renderList();
-  }
+function findIndexById(id) {
+return staffList.findIndex((x) => x.id === id);
+}
 
-  function injectDialogIfNeeded() {
-    // If you already have your own admin UI, you can delete/disable this injection,
-    // but this version avoids ID collisions by using admin_*.
-    let dlg = qs("#adminDialog");
-    if (dlg) return dlg;
+async function persist(preferRemote = true) {
+normalizeOrder();
 
-    dlg = document.createElement("dialog");
-    dlg.id = "adminDialog";
-    dlg.innerHTML = `
-      <form method="dialog" class="admin">
-        <div class="card" style="padding:18px; max-width:760px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
-            <div style="font-weight:700;">管理面板（雲端同步）</div>
-            <button class="btn" value="close" aria-label="Close">關閉</button>
-          </div>
+// If no PIN, we still allow local save (so user doesn't lose work)
+const endpoint = S.getStaffEndpoint?.() || "";
+const canRemote = preferRemote && endpoint;
 
-          <div style="margin-top:14px;">
-            <label style="display:block; font-size:0.95rem; color:var(--muted);">管理 PIN（8 位數字）</label>
-            <input id="admin_pin" class="field__input" inputmode="numeric" autocomplete="one-time-code"
-                   placeholder="例如：31728504" style="width:100%; margin-top:6px;">
-            <div id="admin_msg" style="margin-top:8px; color:var(--muted); font-size:0.92rem;"></div>
-          </div>
+try {
+if (canRemote) {
+await S.saveStaff(staffList, { pin: pinInMemory });
+setStaffFormStatus("已同步更新（所有端刷新後一致）。");
+} else {
+await S.saveStaff(staffList, { endpoint: "" }); // force local
+setStaffFormStatus("已更新本機資料（未同步到雲端）。");
+}
+} catch (e) {
+const m = String(e?.message || e);
+if (m.includes("UNAUTHORIZED")) {
+setStaffFormStatus("PIN 不正確，無法寫入雲端；已先保存本機資料。", true);
+} else {
+setStaffFormStatus("寫入雲端失敗；已先保存本機資料。", true);
+}
+// local fallback
+try { await S.saveStaff(staffList, { endpoint: "" }); } catch {}
+}
 
-          <hr style="border:0; border-top:1px solid rgba(255,255,255,0.10); margin:16px 0;">
+// Let public page re-render
+window.dispatchEvent(new Event("eirlylu:staff-updated"));
+}
 
-          <div>
-            <div style="font-weight:600; margin-bottom:8px;">新增管理人員</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-              <div>
-                <label style="display:block; font-size:0.9rem; color:var(--muted);">暱稱</label>
-                <input id="admin_staffNickname" class="field__input" placeholder="暱稱" style="width:100%; margin-top:6px;">
-              </div>
-              <div>
-                <label style="display:block; font-size:0.9rem; color:var(--muted);">頭像 URL（可選）</label>
-                <input id="admin_staffAvatarUrl" class="field__input" placeholder="https://..." style="width:100%; margin-top:6px;">
-              </div>
-            </div>
-            <div style="margin-top:10px;">
-              <label style="display:block; font-size:0.9rem; color:var(--muted);">簡介</label>
-              <textarea id="admin_staffIntro" class="field__input" rows="3" placeholder="簡介" style="width:100%; margin-top:6px;"></textarea>
-            </div>
+function renderAdminList() {
+const listEl = qs("#adminStaffList");
+const emptyEl = qs("#adminStaffEmptyState");
+if (!listEl) return;
 
-            <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-              <button type="button" class="btn btn--primary" id="admin_staffSaveBtn">加入</button>
-              <button type="button" class="btn" id="admin_staffReloadBtn">重新載入</button>
-            </div>
-          </div>
+listEl.innerHTML = "";
 
-          <div style="margin-top:16px;">
-            <div style="font-weight:600;">管理人員清單</div>
-            <div id="admin_staffList" style="margin-top:10px; display:flex; flex-direction:column; gap:10px;"></div>
-          </div>
-        </div>
-      </form>
-    `;
-    document.body.appendChild(dlg);
-    return dlg;
-  }
+if (!staffList.length) {
+const st = document.createElement("div");
+st.className = "empty-state";
+st.id = "adminStaffEmptyState";
+st.innerHTML = `<p class="muted">尚無管理人員。請先於左側表單新增。</p>`;
+listEl.appendChild(st);
+return;
+}
 
-  function ensureOpenButton(dlg) {
-    let btn = qs("#adminOpen");
-    if (btn) return btn;
+for (let i = 0; i < staffList.length; i++) {
+const s = staffList[i];
+const row = document.createElement("div");
+row.className = "admin-row";
+row.dataset.id = s.id;
 
-    btn = document.createElement("button");
-    btn.id = "adminOpen";
-    btn.className = "btn";
-    btn.textContent = "管理";
-    btn.style.position = "fixed";
-    btn.style.right = "14px";
-    btn.style.bottom = "14px";
-    btn.style.zIndex = "20";
-    document.body.appendChild(btn);
+const avatarUrl = s.avatarUrl || "assets/img/ui/placeholder-avatar.png";
 
-    btn.onclick = async () => {
-      if (typeof dlg.showModal === "function") dlg.showModal();
-      else dlg.setAttribute("open", "open");
-      await reloadStaff();
-      setMsg("已從雲端載入（或使用本機快取）。");
-    };
+row.innerHTML = `
+<div class="admin-row__top">
+<div class="admin-row__left">
+<img class="admin-row__avatar" alt="" />
+<div class="admin-row__meta">
+<div class="admin-row__name"></div>
+<div class="admin-row__bio"></div>
+</div>
+</div>
+<div class="admin-row__actions">
+<button class="btn btn--ghost" type="button" data-act="up">上移</button>
+<button class="btn btn--ghost" type="button" data-act="down">下移</button>
+<button class="btn btn--secondary" type="button" data-act="edit">編輯</button>
+<button class="btn btn--ghost" type="button" data-act="del">刪除</button>
+</div>
+</div>
+`;
 
-    return btn;
-  }
+const img = qs(".admin-row__avatar", row);
+const nameEl = qs(".admin-row__name", row);
+const bioEl = qs(".admin-row__bio", row);
 
-  async function init() {
-    const dlg = injectDialogIfNeeded();
-    ensureOpenButton(dlg);
+img.src = avatarUrl;
+img.onerror = () => { img.onerror = null; img.src = "assets/img/ui/placeholder-avatar.png"; };
+nameEl.textContent = s.nickname || "（未命名）";
+bioEl.textContent = s.intro || "";
 
-    const pinEl = qs("#admin_pin", dlg);
-    pinEl.addEventListener("input", () => {
-      const v = safeText(pinEl.value, 16);
-      pinInMemory = v;
-      if (v && !isDigits(v, 8)) setMsg("PIN 必須為 8 位數字。", true);
-      else setMsg("");
-    });
+// Actions
+const btnUp = qs('[data-act="up"]', row);
+const btnDown = qs('[data-act="down"]', row);
+const btnEdit = qs('[data-act="edit"]', row);
+const btnDel = qs('[data-act="del"]', row);
 
-    qs("#admin_staffSaveBtn", dlg).onclick = async () => {
-      const nickname = safeText(qs("#admin_staffNickname", dlg).value, 80);
-      const avatarUrl = safeText(qs("#admin_staffAvatarUrl", dlg).value, 2000);
-      const intro = safeText(qs("#admin_staffIntro", dlg).value, 2000);
+btnUp.disabled = i === 0;
+btnDown.disabled = i === staffList.length - 1;
 
-      if (!nickname) { setMsg("暱稱不可為空。", true); return; }
+btnUp.addEventListener("click", async () => {
+const [x] = staffList.splice(i, 1);
+staffList.splice(i - 1, 0, x);
+renderAdminList();
+await persist(true);
+});
 
-      staffList.push({ id: `staff_${Date.now()}`, nickname, avatarUrl, intro });
-      normalizeOrder();
-      renderList();
-      await persist();
+btnDown.addEventListener("click", async () => {
+const [x] = staffList.splice(i, 1);
+staffList.splice(i + 1, 0, x);
+renderAdminList();
+await persist(true);
+});
 
-      qs("#admin_staffNickname", dlg).value = "";
-      qs("#admin_staffAvatarUrl", dlg).value = "";
-      qs("#admin_staffIntro", dlg).value = "";
-    };
+btnEdit.addEventListener("click", () => {
+fillStaffForm(s);
+qs("#staffName")?.focus();
+});
 
-    qs("#admin_staffReloadBtn", dlg).onclick = async () => {
-      await reloadStaff();
-      setMsg("已重新載入。");
-    };
+btnDel.addEventListener("click", async () => {
+staffList.splice(i, 1);
+clearStaffForm();
+renderAdminList();
+await persist(true);
+});
 
-    // initial preload (non-blocking)
-    try { await reloadStaff(); } catch {}
-  }
+listEl.appendChild(row);
+}
 
-  document.addEventListener("DOMContentLoaded", init);
+if (emptyEl) emptyEl.remove();
+}
+
+async function reloadStaff(preferRemote = true) {
+staffList = await S.loadStaff({ preferRemote });
+normalizeOrder();
+renderAdminList();
+window.dispatchEvent(new Event("eirlylu:staff-updated"));
+}
+
+async function unlock() {
+const input = qs("#adminCodeInput");
+const code = safeText(input?.value || "", 16);
+
+if (!isDigits(code, 8)) {
+setGateError("請輸入 8 位數字。");
+return;
+}
+
+pinInMemory = code;
+sessionStorage.setItem(SS_UNLOCK, "1");
+sessionStorage.setItem(SS_PIN, pinInMemory);
+
+hideGate();
+showPanel();
+
+// After unlock, load remote first if endpoint exists
+try {
+await reloadStaff(true);
+setStaffFormStatus("已載入管理人員資料。");
+} catch {
+await reloadStaff(false);
+setStaffFormStatus("雲端載入失敗，已使用本機資料。", true);
+}
+}
+
+function lock() {
+pinInMemory = "";
+sessionStorage.removeItem(SS_UNLOCK);
+sessionStorage.removeItem(SS_PIN);
+hidePanel();
+clearStaffForm();
+setStaffFormStatus("已鎖定。");
+}
+
+function wireButtons() {
+// Open gate buttons
+qs("#openAdminGate")?.addEventListener("click", showGate);
+qs("#openAdminGateInline")?.addEventListener("click", showGate);
+
+// Gate unlock
+qs("#unlockAdmin")?.addEventListener("click", unlock);
+
+// Allow Enter in input to unlock
+qs("#adminCodeInput")?.addEventListener("keydown", (e) => {
+if (e.key === "Enter") {
+e.preventDefault();
+unlock();
+}
+});
+
+// Lock button
+qs("#lockAdminBtn")?.addEventListener("click", lock);
+
+// Export
+qs("#exportDataBtn")?.addEventListener("click", () => {
+downloadJson("staff.export.json", staffList);
+setStaffFormStatus("已匯出 staff.export.json。");
+});
+
+// Staff form
+qs("#staffForm")?.addEventListener("submit", async (e) => {
+e.preventDefault();
+
+const id = safeText(qs("#staffId")?.value || "", 80);
+const nickname = safeText(qs("#staffName")?.value || "", 80);
+const intro = safeText(qs("#staffBio")?.value || "", 2000);
+const avatarUrl = normalizeUrl(qs("#staffAvatarUrl")?.value || "");
+
+if (!nickname) {
+setStaffFormStatus("暱稱不可為空。", true);
+return;
+}
+
+const item = {
+id: id || `staff_${randomId()}`,
+nickname,
+intro,
+avatarUrl,
+};
+
+const idx = id ? findIndexById(id) : -1;
+if (idx >= 0) staffList[idx] = { ...staffList[idx], ...item };
+else staffList.push(item);
+
+clearStaffForm();
+renderAdminList();
+await persist(true);
+});
+
+qs("#resetStaffFormBtn")?.addEventListener("click", () => {
+clearStaffForm();
+});
+
+// Import
+qs("#importDataBtn")?.addEventListener("click", async () => {
+const file = qs("#importFileInput")?.files?.[0];
+if (!file) {
+setImportStatus("請先選擇 JSON 檔案。", true);
+return;
+}
+
+try {
+const obj = await readJsonFile(file);
+if (!Array.isArray(obj)) throw new Error("EXPECTED_ARRAY");
+staffList = obj;
+normalizeOrder();
+renderAdminList();
+await persist(true);
+setImportStatus("匯入完成。");
+} catch (e) {
+setImportStatus("匯入失敗：JSON 格式不正確或非陣列。", true);
+}
+});
+
+// Reset local
+qs("#resetLocalDataBtn")?.addEventListener("click", async () => {
+try {
+localStorage.removeItem("eirlylu.staff.cache.v1");
+localStorage.removeItem("eirlylu.staff.cacheAt.v1");
+setImportStatus("已重置本機資料。");
+await reloadStaff(true);
+} catch {
+setImportStatus("重置失敗。", true);
+}
+});
+}
+
+function restoreUnlockState() {
+const unlocked = sessionStorage.getItem(SS_UNLOCK) === "1";
+const pin = sessionStorage.getItem(SS_PIN) || "";
+if (unlocked && isDigits(pin, 8)) {
+pinInMemory = pin;
+showPanel();
+} else {
+hidePanel();
+}
+}
+
+async function init() {
+wireButtons();
+restoreUnlockState();
+
+// Preload staff (doesn't require unlock); remote if endpoint exists
+try { await reloadStaff(true); } catch { await reloadStaff(false); }
+}
+
+E.admin = { init };
 })();
