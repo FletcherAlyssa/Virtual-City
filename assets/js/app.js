@@ -35,7 +35,7 @@
     const el = qs(id);
     if (el) el.setAttribute(attr, String(value ?? ""));
   }
-
+window.Eirlylu.siteDefaults = siteDefaults;
   function renderSite(siteDefaults) {
     // Titles/subtitles/notice
     setText("#siteTitle", siteDefaults?.site?.title || "虛擬都市 艾爾莉露");
