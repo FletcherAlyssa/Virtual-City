@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "api": {
-    "staffEndpoint": "https://virtualcity-staff.laam670.workers.dev/staff"
+    "staffEndpoint": "https://virtualcity.laam670.workers.dev/staff"
   },
   "site": {
     "title": "虛擬世界 艾爾莉露",
