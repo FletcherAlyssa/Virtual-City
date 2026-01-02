@@ -315,6 +315,49 @@ html[data-theme="light"] .topbar {
   outline: 1px solid rgba(255, 120, 190, 0.08);
   outline-offset: 0;
 }
+.card {
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  pointer-events: none;
+  opacity: 0;
+
+  background:
+    radial-gradient(circle at 30% 25%,
+      rgba(255, 120, 190, 0.20),
+      transparent 42%
+    ),
+    repeating-radial-gradient(
+      circle at 30% 25%,
+      rgba(255, 120, 190, 0.00) 0px,
+      rgba(255, 120, 190, 0.00) 14px,
+      rgba(185, 130, 255, 0.12) 18px,
+      rgba(255, 120, 190, 0.00) 26px
+    );
+
+  filter: blur(10px);
+  transform: rotate(10deg);
+  transition: opacity var(--t-med) var(--ease);
+}
+
+.card:hover::before {
+  opacity: 0.22;
+  animation: card-ripple 2.6s linear infinite;
+}
+
+@keyframes card-ripple {
+  from { transform: rotate(10deg) translate3d(0, 0, 0); }
+  to   { transform: rotate(10deg) translate3d(18%, 10%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover::before { animation: none; }
+}
 .card--content {
   padding: 0;
 }
