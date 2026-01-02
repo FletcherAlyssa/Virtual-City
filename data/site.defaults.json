@@ -1,9 +1,8 @@
 {
+  "schemaVersion": 1,
   "api": {
     "staffEndpoint": "https://virtual-city-staff.laam670.workers.dev/staff"
   },
-{
-  "schemaVersion": 1,
   "site": {
     "title": "虛擬世界 艾爾莉露",
     "subtitle": "第十四超算力伺服器所架構的虛擬世界",
