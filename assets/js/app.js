@@ -42,7 +42,7 @@
     setText("#siteSubtitle", siteDefaults?.site?.subtitle || "第十四超算力伺服器所架構的虛擬世界");
     setText("#footerTitle", siteDefaults?.site?.title || "艾爾莉露");
 
-    setText("#heroHeadline", `${siteDefaults?.site?.title || "虛擬都市 艾爾莉露"} 官方網站`);
+    setText("#heroHeadline", `${siteDefaults?.site?.title || "艾爾莉露"} 官方網站`);
     const lead = "本群為巧妙的揉和了科幻以及幻想風格的世界背景，專為喜歡「洗腦」、「敗北」、「雌伏」、「惡墮」等墮落劇情的人們布置的語Ｃ文愛群。";
     setText("#heroLead", lead);
 
