@@ -18,9 +18,9 @@ data/site.defaults.json
   },
   "content": {
     "groupIntroTitle": "群組簡介",
-    "groupIntroMarkdown": "",
+    "groupIntroMarkdown": "\",
     "storyBackgroundTitle": "故事背景",
-    "storyBackgroundMarkdown": ""
+    "storyBackgroundMarkdown": "\"
   },
   "seo": {
     "description": "艾爾莉露官方網站：群組簡介、邀請連結、QR Code、管理人員名單。",
