@@ -1,488 +1,383 @@
-/* admin-panel.js - admin unlock + CRUD + ordering (drag & drop) */
+/* admin-panel.js — Admin UI glue + remote staff sync (Worker KV)
+   - Requires: utils.js, storage.js
+   - Emits: window event "eirlylu:staff-updated" with detail = staffList
+*/
 (() => {
   "use strict";
 
   const E = (window.Eirlylu ||= {});
-  E.admin ||= {};
+  const U = E.utils || {};
+  const S = E.storage;
 
-  const {
-    qs,
-    qsa,
-    isDigits,
-    safeText,
-    normalizeUrl,
-    randomId,
-    downloadJson,
-    readJsonFile,
-    supportsDialog,
-  } = E.utils;
+  const qs = U.qs || ((sel, root = document) => root.querySelector(sel));
+  const qsa = U.qsa || ((sel, root = document) => Array.from(root.querySelectorAll(sel)));
+  const safeText = U.safeText || ((s, n = 2000) => String(s ?? "").trim().slice(0, n));
+  const isDigits = U.isDigits || ((s, len) => {
+    const t = String(s ?? "");
+    return (len ? t.length === len : true) && /^[0-9]+$/.test(t);
+  });
 
-  const { getStaff, setStaff, exportData, importData, resetAll } = E.storage;
-
-  const ADMIN_CODE = "31728504"; // fixed 8-digit code
-
-  // Session-only admin unlock flag (avoid persistent unlock)
-  const SESSION_KEY = "eirlylu_admin_unlocked_v1";
-
-  function isUnlocked() {
-    try {
-      return sessionStorage.getItem(SESSION_KEY) === "1";
-    } catch {
-      return false;
-    }
-  }
-  function setUnlocked(flag) {
-    try {
-      sessionStorage.setItem(SESSION_KEY, flag ? "1" : "0");
-    } catch {
-      // ignore
-    }
+  if (!S) {
+    console.warn("[admin-panel] E.storage is missing");
+    return;
   }
 
-  function dispatchStaffUpdated() {
-    window.dispatchEvent(new CustomEvent("eirlylu:staff-updated"));
+  // --- Minimal, resilient admin UI binding ---
+  // Works with existing markup if present; otherwise injects a small dialog.
+  let pinInMemory = ""; // do NOT persist
+  let staffList = [];
+
+  function emitUpdated(list) {
+    const detail = Array.isArray(list) ? list : [];
+    window.dispatchEvent(new CustomEvent("eirlylu:staff-updated", { detail }));
+    // If app has a hook, call it too (optional)
+    if (typeof E.setStaff === "function") E.setStaff(detail);
+    if (E.app && typeof E.app.setStaff === "function") E.app.setStaff(detail);
   }
 
-  function dispatchAdminToggled(unlocked) {
-    window.dispatchEvent(new CustomEvent("eirlylu:admin-toggled", { detail: { unlocked } }));
-  }
+  function ensureAdminUI() {
+    // Try existing
+    let openBtn = qs('[data-action="open-admin"]') || qs("#adminOpen") || qs("#btnAdmin");
+    let dlg = qs("#adminDialog") || qs("#adminModal") || qs('dialog[data-admin="1"]');
 
-  function getEls() {
-    return {
-      openAdminGate: qs("#openAdminGate"),
-      openAdminGateInline: qs("#openAdminGateInline"),
-      adminGateModal: qs("#adminGateModal"),
-      adminCodeInput: qs("#adminCodeInput"),
-      adminGateError: qs("#adminGateError"),
-      unlockAdmin: qs("#unlockAdmin"),
+    if (!dlg) {
+      // Inject a minimal dialog if missing (safe default)
+      dlg = document.createElement("dialog");
+      dlg.id = "adminDialog";
+      dlg.setAttribute("data-admin", "1");
+      dlg.innerHTML = `
+        <form method="dialog" class="admin">
+          <div class="card" style="padding:18px; max-width:720px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+              <div style="font-weight:700;">管理面板</div>
+              <button class="btn" value="close" aria-label="Close">關閉</button>
+            </div>
 
-      adminPanel: qs("#adminPanel"),
-      lockAdminBtn: qs("#lockAdminBtn"),
+            <div style="margin-top:14px;">
+              <label style="display:block; font-size:0.95rem; color:var(--muted);">管理 PIN（8 位數字）</label>
+              <input id="adminPin" class="field__input" inputmode="numeric" autocomplete="one-time-code"
+                     placeholder="例如：31728504" style="width:100%; margin-top:6px;">
+              <div id="adminMsg" style="margin-top:8px; color:var(--muted); font-size:0.92rem;"></div>
+            </div>
 
-      staffForm: qs("#staffForm"),
-      staffId: qs("#staffId"),
-      staffName: qs("#staffName"),
-      staffBio: qs("#staffBio"),
-      staffAvatarUrl: qs("#staffAvatarUrl"),
-      staffFormStatus: qs("#staffFormStatus"),
-      resetStaffFormBtn: qs("#resetStaffFormBtn"),
+            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.10); margin:16px 0;">
 
-      adminStaffList: qs("#adminStaffList"),
-      adminStaffEmptyState: qs("#adminStaffEmptyState"),
+            <div>
+              <div style="font-weight:600; margin-bottom:8px;">新增 / 編輯管理人員</div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div>
+                  <label style="display:block; font-size:0.9rem; color:var(--muted);">暱稱</label>
+                  <input id="staffNickname" class="field__input" placeholder="暱稱" style="width:100%; margin-top:6px;">
+                </div>
+                <div>
+                  <label style="display:block; font-size:0.9rem; color:var(--muted);">頭像 URL（可選）</label>
+                  <input id="staffAvatarUrl" class="field__input" placeholder="https://..." style="width:100%; margin-top:6px;">
+                </div>
+              </div>
+              <div style="margin-top:10px;">
+                <label style="display:block; font-size:0.9rem; color:var(--muted);">簡介</label>
+                <textarea id="staffIntro" class="field__input" rows="3" placeholder="簡介" style="width:100%; margin-top:6px;"></textarea>
+              </div>
 
-      exportDataBtn: qs("#exportDataBtn"),
-      importFileInput: qs("#importFileInput"),
-      importDataBtn: qs("#importDataBtn"),
-      importStatus: qs("#importStatus"),
-      resetLocalDataBtn: qs("#resetLocalDataBtn"),
-    };
-  }
+              <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+                <button type="button" class="btn btn--primary" id="staffSaveBtn">加入/更新</button>
+                <button type="button" class="btn" id="staffClearBtn">清空表單</button>
+              </div>
+            </div>
 
-  function showAdminPanel(els) {
-    if (!els.adminPanel) return;
-    els.adminPanel.classList.add("is-visible");
-    els.adminPanel.setAttribute("aria-hidden", "false");
-  }
-
-  function hideAdminPanel(els) {
-    if (!els.adminPanel) return;
-    els.adminPanel.classList.remove("is-visible");
-    els.adminPanel.setAttribute("aria-hidden", "true");
-  }
-
-  function openGate(els) {
-    if (!els.adminGateModal) return;
-    els.adminGateError.textContent = "";
-    if (els.adminCodeInput) els.adminCodeInput.value = "";
-    if (supportsDialog() && typeof els.adminGateModal.showModal === "function") {
-      els.adminGateModal.showModal();
-      setTimeout(() => els.adminCodeInput?.focus(), 0);
-      return;
-    }
-    // Fallback: simple prompt
-    const code = window.prompt("請輸入 8 位數字以解鎖管理模式：");
-    if (code == null) return;
-    attemptUnlock(els, code);
-  }
-
-  function closeGate(els) {
-    if (!els.adminGateModal) return;
-    try {
-      if (supportsDialog() && els.adminGateModal.open) els.adminGateModal.close();
-    } catch {
-      // ignore
-    }
-  }
-
-  function attemptUnlock(els, codeRaw) {
-    const code = String(codeRaw ?? "").trim();
-    if (!isDigits(code, 8)) {
-      if (els.adminGateError) els.adminGateError.textContent = "格式錯誤：請輸入 8 位數字。";
-      return false;
-    }
-    if (code !== ADMIN_CODE) {
-      if (els.adminGateError) els.adminGateError.textContent = "解鎖失敗：數字不正確。";
-      return false;
-    }
-    setUnlocked(true);
-    closeGate(els);
-    showAdminPanel(els);
-    renderAdminList(els);
-    dispatchAdminToggled(true);
-    return true;
-  }
-
-  function lock(els) {
-    setUnlocked(false);
-    hideAdminPanel(els);
-    dispatchAdminToggled(false);
-  }
-
-  function resetForm(els) {
-    els.staffId.value = "";
-    els.staffName.value = "";
-    els.staffBio.value = "";
-    els.staffAvatarUrl.value = "";
-    els.staffFormStatus.textContent = "";
-    els.staffName.focus();
-  }
-
-  function readForm(els) {
-    const id = safeText(els.staffId.value, 120);
-    const name = safeText(els.staffName.value, 40);
-    const bio = safeText(els.staffBio.value, 200);
-    const avatarUrl = normalizeUrl(els.staffAvatarUrl.value);
-
-    if (!name) return { ok: false, error: "請填寫暱稱。" };
-    if (!bio) return { ok: false, error: "請填寫簡介。" };
-
-    return {
-      ok: true,
-      value: {
-        id: id || randomId(),
-        name,
-        bio,
-        avatarUrl, // may be ""
-      },
-    };
-  }
-
-  function upsertStaff(item) {
-    const staff = getStaff();
-    const idx = staff.findIndex((s) => s.id === item.id);
-
-    if (idx >= 0) {
-      staff[idx] = {
-        ...staff[idx],
-        ...item,
-        updatedAt: Date.now(),
-      };
-    } else {
-      staff.push({
-        ...item,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
-    }
-    setStaff(staff);
-    dispatchStaffUpdated();
-    return staff;
-  }
-
-  function deleteStaff(id) {
-    const staff = getStaff().filter((s) => s.id !== id);
-    setStaff(staff);
-    dispatchStaffUpdated();
-    return staff;
-  }
-
-  function moveStaff(id, dir) {
-    const staff = getStaff();
-    const idx = staff.findIndex((s) => s.id === id);
-    if (idx < 0) return staff;
-
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= staff.length) return staff;
-
-    const [it] = staff.splice(idx, 1);
-    staff.splice(newIdx, 0, it);
-
-    setStaff(staff);
-    dispatchStaffUpdated();
-    return staff;
-  }
-
-  function reorderByDrag(dragId, targetId) {
-    if (!dragId || !targetId || dragId === targetId) return;
-
-    const staff = getStaff();
-    const from = staff.findIndex((s) => s.id === dragId);
-    const to = staff.findIndex((s) => s.id === targetId);
-    if (from < 0 || to < 0) return;
-
-    const [it] = staff.splice(from, 1);
-    staff.splice(to, 0, it);
-
-    setStaff(staff);
-    dispatchStaffUpdated();
-  }
-
-  function renderAdminList(els) {
-    if (!els.adminStaffList) return;
-    const staff = getStaff();
-
-    // clear list
-    els.adminStaffList.innerHTML = "";
-
-    if (!staff.length) {
-      const empty = document.createElement("div");
-      empty.className = "empty-state";
-      empty.id = "adminStaffEmptyState";
-      empty.innerHTML = `<p class="muted">尚無管理人員。請先於左側表單新增。</p>`;
-      els.adminStaffList.appendChild(empty);
-      return;
-    }
-
-    let draggedId = null;
-
-    for (const s of staff) {
-      const row = document.createElement("div");
-      row.className = "admin-row";
-      row.dataset.id = s.id;
-      row.draggable = true;
-
-      row.innerHTML = `
-        <div class="admin-row__top">
-          <div class="admin-row__left">
-            <img class="admin-row__avatar" alt="" />
-            <div class="admin-row__meta">
-              <p class="admin-row__name"></p>
-              <p class="admin-row__bio"></p>
+            <div style="margin-top:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                <div style="font-weight:600;">管理人員清單</div>
+                <button type="button" class="btn" id="staffReloadBtn">重新載入</button>
+              </div>
+              <div id="adminStaffList" style="margin-top:10px; display:flex; flex-direction:column; gap:10px;"></div>
             </div>
           </div>
-          <div class="admin-row__actions">
-            <button class="mini-btn mini-btn--drag" type="button" title="拖曳排序" aria-label="拖曳排序">↕</button>
-            <button class="mini-btn" type="button" data-act="up" title="上移" aria-label="上移">↑</button>
-            <button class="mini-btn" type="button" data-act="down" title="下移" aria-label="下移">↓</button>
-            <button class="mini-btn" type="button" data-act="edit" title="編輯" aria-label="編輯">編輯</button>
-            <button class="mini-btn mini-btn--danger" type="button" data-act="del" title="刪除" aria-label="刪除">刪除</button>
-          </div>
-        </div>
+        </form>
       `;
+      document.body.appendChild(dlg);
+    }
 
-      const avatar = qs(".admin-row__avatar", row);
-      const nameEl = qs(".admin-row__name", row);
-      const bioEl = qs(".admin-row__bio", row);
+    if (!openBtn) {
+      // Inject a discreet corner button if missing
+      openBtn = document.createElement("button");
+      openBtn.id = "adminOpen";
+      openBtn.className = "btn";
+      openBtn.textContent = "管理";
+      openBtn.style.position = "fixed";
+      openBtn.style.right = "14px";
+      openBtn.style.bottom = "14px";
+      openBtn.style.zIndex = "20";
+      document.body.appendChild(openBtn);
+    }
 
-      nameEl.textContent = s.name;
-      bioEl.textContent = s.bio;
+    return { openBtn, dlg };
+  }
 
-      // Avatar preview (fallback handled by app render; here use placeholder if invalid/empty)
-      avatar.src = s.avatarUrl || "assets/img/ui/placeholder-avatar.png";
-      avatar.onerror = () => {
-        avatar.onerror = null;
-        avatar.src = "assets/img/ui/placeholder-avatar.png";
-      };
+  function renderList(container) {
+    container.innerHTML = "";
 
-      // Click actions
-      row.addEventListener("click", (ev) => {
-        const btn = ev.target?.closest("button[data-act]");
-        if (!btn) return;
+    if (!staffList.length) {
+      const empty = document.createElement("div");
+      empty.className = "card";
+      empty.style.padding = "12px";
+      empty.style.color = "var(--muted)";
+      empty.textContent = "尚未新增管理人員。";
+      container.appendChild(empty);
+      return;
+    }
 
-        const act = btn.getAttribute("data-act");
-        if (act === "edit") {
-          els.staffId.value = s.id;
-          els.staffName.value = s.name;
-          els.staffBio.value = s.bio;
-          els.staffAvatarUrl.value = s.avatarUrl || "";
-          els.staffFormStatus.textContent = "已載入待編輯資料。";
-          els.staffName.focus();
-          return;
-        }
-        if (act === "del") {
-          const ok = window.confirm(`確定刪除「${s.name}」？`);
-          if (!ok) return;
-          deleteStaff(s.id);
-          renderAdminList(els);
-          els.staffFormStatus.textContent = "已刪除。";
-          if (els.staffId.value === s.id) resetForm(els);
-          return;
-        }
-        if (act === "up") {
-          moveStaff(s.id, -1);
-          renderAdminList(els);
-          return;
-        }
-        if (act === "down") {
-          moveStaff(s.id, +1);
-          renderAdminList(els);
-          return;
-        }
+    staffList.forEach((s, idx) => {
+      const row = document.createElement("div");
+      row.className = "card";
+      row.style.padding = "12px";
+      row.style.display = "grid";
+      row.style.gridTemplateColumns = "48px 1fr auto";
+      row.style.gap = "12px";
+      row.style.alignItems = "center";
+
+      const avatar = document.createElement("div");
+      avatar.style.width = "48px";
+      avatar.style.height = "48px";
+      avatar.style.borderRadius = "14px";
+      avatar.style.overflow = "hidden";
+      avatar.style.background = "rgba(255,255,255,0.06)";
+      avatar.style.border = "1px solid rgba(255,255,255,0.10)";
+      if (s.avatarUrl) {
+        const img = document.createElement("img");
+        img.src = s.avatarUrl;
+        img.alt = "";
+        img.style.width = "100%";
+        img.style.height = "100%";
+        img.style.objectFit = "cover";
+        avatar.appendChild(img);
+      }
+      row.appendChild(avatar);
+
+      const info = document.createElement("div");
+      const name = document.createElement("div");
+      name.style.fontWeight = "700";
+      name.textContent = s.nickname || "(未命名)";
+      const intro = document.createElement("div");
+      intro.style.marginTop = "4px";
+      intro.style.color = "var(--muted)";
+      intro.style.fontSize = "0.92rem";
+      intro.textContent = s.intro || "";
+      info.appendChild(name);
+      info.appendChild(intro);
+      row.appendChild(info);
+
+      const actions = document.createElement("div");
+      actions.style.display = "flex";
+      actions.style.gap = "8px";
+      actions.style.flexWrap = "wrap";
+      actions.style.justifyContent = "flex-end";
+
+      const btnEdit = document.createElement("button");
+      btnEdit.type = "button";
+      btnEdit.className = "btn";
+      btnEdit.textContent = "編輯";
+      btnEdit.addEventListener("click", () => fillFormFrom(idx));
+
+      const btnUp = document.createElement("button");
+      btnUp.type = "button";
+      btnUp.className = "btn";
+      btnUp.textContent = "上移";
+      btnUp.disabled = idx === 0;
+      btnUp.addEventListener("click", async () => {
+        move(idx, idx - 1);
+        await persist();
       });
 
-      // Drag behavior: allow drag only when starting on drag handle
-      row.addEventListener("dragstart", (ev) => {
-        const isHandle = ev.target?.closest(".mini-btn--drag");
-        if (!isHandle) {
-          ev.preventDefault();
-          return;
-        }
-        draggedId = s.id;
-        row.classList.add("is-dragging");
-        try {
-          ev.dataTransfer.setData("text/plain", draggedId);
-          ev.dataTransfer.effectAllowed = "move";
-        } catch {
-          // ignore
-        }
+      const btnDown = document.createElement("button");
+      btnDown.type = "button";
+      btnDown.className = "btn";
+      btnDown.textContent = "下移";
+      btnDown.disabled = idx === staffList.length - 1;
+      btnDown.addEventListener("click", async () => {
+        move(idx, idx + 1);
+        await persist();
       });
 
-      row.addEventListener("dragend", () => {
-        row.classList.remove("is-dragging");
-        qsa(".admin-row.is-drop-target", els.adminStaffList).forEach((n) =>
-          n.classList.remove("is-drop-target")
-        );
-        draggedId = null;
+      const btnDel = document.createElement("button");
+      btnDel.type = "button";
+      btnDel.className = "btn";
+      btnDel.textContent = "刪除";
+      btnDel.addEventListener("click", async () => {
+        staffList.splice(idx, 1);
+        normalizeOrder();
+        renderList(container);
+        await persist();
       });
 
-      row.addEventListener("dragover", (ev) => {
-        if (!draggedId) return;
-        ev.preventDefault();
-        row.classList.add("is-drop-target");
-        try {
-          ev.dataTransfer.dropEffect = "move";
-        } catch {
-          // ignore
-        }
-      });
+      actions.append(btnEdit, btnUp, btnDown, btnDel);
+      row.appendChild(actions);
 
-      row.addEventListener("dragleave", () => {
-        row.classList.remove("is-drop-target");
-      });
+      container.appendChild(row);
+    });
+  }
 
-      row.addEventListener("drop", (ev) => {
-        if (!draggedId) return;
-        ev.preventDefault();
-        row.classList.remove("is-drop-target");
-        const targetId = row.dataset.id;
-        reorderByDrag(draggedId, targetId);
-        renderAdminList(els);
-      });
+  function normalizeOrder() {
+    staffList.forEach((x, i) => { x.order = i; x.updatedAt = new Date().toISOString(); });
+  }
 
-      els.adminStaffList.appendChild(row);
+  function move(from, to) {
+    if (to < 0 || to >= staffList.length) return;
+    const [x] = staffList.splice(from, 1);
+    staffList.splice(to, 0, x);
+    normalizeOrder();
+  }
+
+  function fillFormFrom(idx) {
+    const s = staffList[idx];
+    qs("#staffNickname").value = s.nickname || "";
+    qs("#staffAvatarUrl").value = s.avatarUrl || "";
+    qs("#staffIntro").value = s.intro || "";
+    qs("#staffSaveBtn").setAttribute("data-edit-idx", String(idx));
+    setMsg("已載入編輯項目。");
+  }
+
+  function clearForm() {
+    qs("#staffNickname").value = "";
+    qs("#staffAvatarUrl").value = "";
+    qs("#staffIntro").value = "";
+    qs("#staffSaveBtn").removeAttribute("data-edit-idx");
+  }
+
+  function setMsg(text, isError = false) {
+    const el = qs("#adminMsg");
+    if (!el) return;
+    el.textContent = text || "";
+    el.style.color = isError ? "rgba(255,150,170,0.95)" : "var(--muted)";
+  }
+
+  async function persist() {
+    try {
+      if (!pinInMemory || !isDigits(pinInMemory, 8)) {
+        // allow local cache only (still updates UI), but remote will fail
+        await S.saveStaff(staffList, { pin: "" });
+        emitUpdated(staffList);
+        setMsg("已更新本機快取（未提供有效 PIN，未同步到雲端）。");
+        return;
+      }
+      await S.saveStaff(staffList, { pin: pinInMemory });
+      emitUpdated(staffList);
+      setMsg("已同步更新（所有端刷新後一致）。");
+    } catch (e) {
+      const msg = String(e?.message || e);
+      if (msg.includes("UNAUTHORIZED") || msg.includes("401")) {
+        setMsg("PIN 不正確，無法寫入雲端。", true);
+      } else {
+        setMsg("寫入雲端失敗，已保留本機快取。", true);
+      }
+      // keep local anyway
+      try { await S.saveStaff(staffList, { pin: "" }); } catch {}
+      emitUpdated(staffList);
     }
   }
 
-  function init() {
-    const els = getEls();
+  async function reloadStaff() {
+    staffList = await S.loadStaff({ preferRemote: true });
+    normalizeOrder();
+    emitUpdated(staffList);
+  }
 
-    // Gate open buttons
-    els.openAdminGate?.addEventListener("click", () => openGate(els));
-    els.openAdminGateInline?.addEventListener("click", () => openGate(els));
+  async function init() {
+    const { openBtn, dlg } = ensureAdminUI();
 
-    // Unlock button
-    els.unlockAdmin?.addEventListener("click", () => {
-      attemptUnlock(els, els.adminCodeInput?.value);
-    });
+    // Open dialog
+    openBtn.addEventListener("click", async () => {
+      if (typeof dlg.showModal === "function") dlg.showModal();
+      else dlg.setAttribute("open", "open");
 
-    // Enter-to-unlock from input
-    els.adminCodeInput?.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter") {
-        ev.preventDefault();
-        attemptUnlock(els, els.adminCodeInput?.value);
-      }
-    });
-
-    // Lock
-    els.lockAdminBtn?.addEventListener("click", () => lock(els));
-
-    // Staff form
-    els.staffForm?.addEventListener("submit", (ev) => {
-      ev.preventDefault();
-      if (!isUnlocked()) {
-        els.staffFormStatus.textContent = "未解鎖管理模式。";
-        return;
-      }
-      const r = readForm(els);
-      if (!r.ok) {
-        els.staffFormStatus.textContent = r.error;
-        return;
-      }
-      upsertStaff(r.value);
-      els.staffFormStatus.textContent = "已儲存。";
-      renderAdminList(els);
-      resetForm(els);
-    });
-
-    els.resetStaffFormBtn?.addEventListener("click", () => resetForm(els));
-
-    // Export
-    els.exportDataBtn?.addEventListener("click", () => {
-      if (!isUnlocked()) {
-        window.alert("未解鎖管理模式。");
-        return;
-      }
-      const payload = exportData();
-      downloadJson("eirlylu_staff_export.json", payload);
-    });
-
-    // Import
-    els.importDataBtn?.addEventListener("click", async () => {
-      if (!isUnlocked()) {
-        els.importStatus.textContent = "未解鎖管理模式。";
-        return;
-      }
-      els.importStatus.textContent = "";
-      const file = els.importFileInput?.files?.[0];
-      if (!file) {
-        els.importStatus.textContent = "請先選擇 JSON 檔案。";
-        return;
-      }
+      // Load freshest staff when opening
       try {
-        const obj = await readJsonFile(file);
-        const res = importData(obj);
-        if (!res.ok) {
-          els.importStatus.textContent = `匯入失敗：${res.error}`;
-          return;
-        }
-        els.importStatus.textContent = `匯入完成：${res.count} 位管理人員。`;
-        renderAdminList(els);
-        dispatchStaffUpdated();
-      } catch (e) {
-        els.importStatus.textContent = `匯入失敗：${e?.message || "未知錯誤"}`;
+        await reloadStaff();
+        setMsg("已從雲端載入（或使用本機快取）。");
+      } catch {
+        setMsg("載入失敗，已使用本機快取。", true);
       }
+
+      // Render
+      const listEl = qs("#adminStaffList", dlg) || qs("#adminStaffList");
+      if (listEl) renderList(listEl);
     });
 
-    // Reset local data
-    els.resetLocalDataBtn?.addEventListener("click", () => {
-      if (!isUnlocked()) {
-        window.alert("未解鎖管理模式。");
-        return;
-      }
-      const ok = window.confirm("確定要重置本機資料？這會清除所有管理人員清單。");
-      if (!ok) return;
-      resetAll();
-      els.importStatus.textContent = "已重置本機資料。";
-      renderAdminList(els);
-      dispatchStaffUpdated();
-      resetForm(els);
-    });
+    // Close handling for non-dialog fallback
+    dlg.addEventListener("close", () => { /* no-op */ });
 
-    // Keep admin panel state on refresh (session only)
-    if (isUnlocked()) {
-      showAdminPanel(els);
-      renderAdminList(els);
-      dispatchAdminToggled(true);
-    } else {
-      hideAdminPanel(els);
-      dispatchAdminToggled(false);
+    // PIN input
+    const pinInput = qs("#adminPin", dlg) || qs("#adminPin");
+    if (pinInput) {
+      pinInput.addEventListener("input", () => {
+        const v = safeText(pinInput.value, 16);
+        pinInMemory = v;
+        if (v && !isDigits(v, 8)) setMsg("PIN 必須為 8 位數字。", true);
+        else setMsg("");
+      });
     }
 
-    // Update admin list when staff changes (e.g., imported elsewhere)
-    window.addEventListener("eirlylu:staff-updated", () => {
-      if (isUnlocked()) renderAdminList(els);
-    });
+    // Buttons
+    const saveBtn = qs("#staffSaveBtn", dlg) || qs("#staffSaveBtn");
+    const clearBtn = qs("#staffClearBtn", dlg) || qs("#staffClearBtn");
+    const reloadBtn = qs("#staffReloadBtn", dlg) || qs("#staffReloadBtn");
+    const listEl = qs("#adminStaffList", dlg) || qs("#adminStaffList");
+
+    if (saveBtn) {
+      saveBtn.addEventListener("click", async () => {
+        const nickname = safeText((qs("#staffNickname", dlg) || qs("#staffNickname"))?.value, 80);
+        const avatarUrl = safeText((qs("#staffAvatarUrl", dlg) || qs("#staffAvatarUrl"))?.value, 2000);
+        const intro = safeText((qs("#staffIntro", dlg) || qs("#staffIntro"))?.value, 2000);
+
+        if (!nickname) {
+          setMsg("暱稱不可為空。", true);
+          return;
+        }
+
+        const editIdxAttr = saveBtn.getAttribute("data-edit-idx");
+        const editIdx = editIdxAttr != null ? Number(editIdxAttr) : NaN;
+
+        const item = {
+          id: (Number.isFinite(editIdx) && staffList[editIdx]) ? staffList[editIdx].id : `staff_${Date.now()}`,
+          nickname,
+          intro,
+          avatarUrl
+        };
+
+        if (Number.isFinite(editIdx) && staffList[editIdx]) {
+          staffList[editIdx] = { ...staffList[editIdx], ...item };
+        } else {
+          staffList.push(item);
+        }
+
+        normalizeOrder();
+        if (listEl) renderList(listEl);
+        clearForm();
+        await persist();
+      });
+    }
+
+    if (clearBtn) clearBtn.addEventListener("click", clearForm);
+
+    if (reloadBtn) {
+      reloadBtn.addEventListener("click", async () => {
+        await reloadStaff();
+        if (listEl) renderList(listEl);
+        setMsg("已重新載入。");
+      });
+    }
+
+    // Initial background load (non-blocking)
+    try {
+      staffList = await S.loadStaff({ preferRemote: true });
+      normalizeOrder();
+      emitUpdated(staffList);
+    } catch {
+      staffList = await S.loadStaff({ preferRemote: false });
+      normalizeOrder();
+      emitUpdated(staffList);
+    }
   }
 
-  E.admin = { init };
+  document.addEventListener("DOMContentLoaded", init);
 })();
