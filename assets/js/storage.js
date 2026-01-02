@@ -48,7 +48,14 @@
     const url = sd?.api?.staffEndpoint;
     return (typeof url === "string" && url.trim()) ? url.trim() : "";
   }
+function isDiscordActivityHost() {
+  return /discordsays\.com$/i.test(location.hostname);
+}
 
+function getEffectiveStaffEndpoint(siteDefaults) {
+  if (isDiscordActivityHost()) return "/staff";
+  return siteDefaults?.api?.staffEndpoint || "";
+}
   function getStaffEndpoint() {
     const override = readJsonLS(LS_KEYS.staffEndpoint, "");
     if (typeof override === "string" && override.trim()) return override.trim();
