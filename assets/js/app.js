@@ -38,25 +38,25 @@
 
   function renderSite(siteDefaults) {
     // Titles/subtitles/notice
-    setText("#siteTitle", siteDefaults?.site?.title || "艾爾莉露");
-    setText("#siteSubtitle", siteDefaults?.site?.subtitle || "");
+    setText("#siteTitle", siteDefaults?.site?.title || "虛擬都市 艾爾莉露");
+    setText("#siteSubtitle", siteDefaults?.site?.subtitle || "第十四超算力伺服器所架構的虛擬世界");
     setText("#footerTitle", siteDefaults?.site?.title || "艾爾莉露");
 
     setText("#heroHeadline", `${siteDefaults?.site?.title || "艾爾莉露"} 官方網站`);
-    const lead = "本頁提供群組簡介、Discord 邀請連結、QR Code 與管理人員資訊。";
+    const lead = "本群為巧妙的揉和了科幻以及幻想風格的世界背景，專為喜歡「洗腦」、「敗北」、「雌伏」、「惡墮」等墮落劇情的人們布置的語Ｃ文愛群。";
     setText("#heroLead", lead);
 
-    setText("#publicNotice", siteDefaults?.site?.publicNotice || "");
+    setText("#publicNotice", siteDefaults?.site?.publicNotice || "你將如同開啟遊戲一般創建一個屬於自己的『虛擬角色』；然而在艾爾莉露之中，『虛擬』早已取代了『現實』，『人類』也將被置換為『數據』所構成的存在。在這個男尊女卑的虛擬世界中，你可以進行過往可能受到背景題材侷限的任何展開，且因為代碼可以被修復的便利性，可以毫無負擔的進行包括Ｇ向的任何玩法。歡迎來到這個靈魂可以被塗改、尊嚴可以被標價的艾爾莉露，祝您、生活愉快。");
 
     // Content sections (Markdown)
     setText("#groupIntroTitle", siteDefaults?.content?.groupIntroTitle || "群組簡介");
     const introMd = siteDefaults?.content?.groupIntroMarkdown || "";
-    const introHtml = markdownToHtml(introMd) || `<p class="muted">（尚未設定內容）</p>`;
+    const introHtml = markdownToHtml(introMd) || `<p class="muted">本群為科幻與幻想混合風格的語 C 創作群，主軸圍繞「虛擬世界」、「階級秩序」與「心智可被改寫」等題材。\n\n### 玩法概要\n- 你將以「轉生」方式建立並扮演一名住民角色（人族 / 亞人 / 魔族等）。\n- 在艾爾莉露，個體由代碼構成；人格、記憶與行為可能因事件而受到干預或修復。</p>`;
     setHtml("#groupIntroContent", introHtml);
 
     setText("#storyBackgroundTitle", siteDefaults?.content?.storyBackgroundTitle || "故事背景");
     const storyMd = siteDefaults?.content?.storyBackgroundMarkdown || "";
-    const storyHtml = markdownToHtml(storyMd) || `<p class="muted">（尚未設定內容）</p>`;
+    const storyHtml = markdownToHtml(storyMd) || `<p class="muted">故事發生於 23 世紀的平行宇宙。人類科技跨越奇異點後突飛猛進，最終以「意識上傳」形式實現了近似永生：將精神/靈魂剝離肉體，投入由超算伺服器承載的虛擬世界中生活。\n\n### 艾爾莉露（第十四超算力伺服器）\n艾爾莉露表面由一名公主擁有，實際由其背後的富商掌控。為擴張人口與維持秩序，世界被設計為明確的階級社會並允許管理者制定規則。</p>`;
     setHtml("#storyBackgroundContent", storyHtml);
 
     // Discord invite
