@@ -2,7 +2,7 @@ data/site.defaults.json
 {
   "schemaVersion": 1,
   "site": {
-    "title": "艾爾莉露",
+    "title": "虛擬世界 艾爾莉露",
     "subtitle": "虛擬世界",
     "language": "zh-Hant",
     "theme": "auto",
@@ -18,9 +18,9 @@ data/site.defaults.json
   },
   "content": {
     "groupIntroTitle": "群組簡介",
-    "groupIntroMarkdown": "測試",
+    "groupIntroMarkdown": "",
     "storyBackgroundTitle": "故事背景",
-    "storyBackgroundMarkdown": "測試"
+    "storyBackgroundMarkdown": ""
   },
   "seo": {
     "description": "艾爾莉露官方網站：群組簡介、邀請連結、QR Code、管理人員名單。",
