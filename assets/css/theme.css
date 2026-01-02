@@ -52,9 +52,13 @@
   --focus: 2px solid rgba(120, 170, 255, 0.85);
   --focus-offset: 2px;
 
-  /* Brand-ish accent (neutral, not loud) */
-  --accent: rgba(120, 170, 255, 0.95);
-  --accent-weak: rgba(120, 170, 255, 0.22);
+  /* Brand accent (pink/violet) */
+  --accent: rgba(255, 120, 190, 0.95);
+  --accent-weak: rgba(255, 120, 190, 0.22);
+
+  /* Optional secondary accent (violet) */
+  --accent-2: rgba(185, 130, 255, 0.85);
+  --accent-2-weak: rgba(185, 130, 255, 0.18);
 }
 
 /* Default = dark-ish, matches manifest theme_color */
