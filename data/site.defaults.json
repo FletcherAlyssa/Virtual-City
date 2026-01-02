@@ -1,4 +1,4 @@
-data/site.defaults.json
+
 {
   "schemaVersion": 1,
   "site": {
@@ -18,9 +18,9 @@ data/site.defaults.json
   },
   "content": {
     "groupIntroTitle": "群組簡介",
-    "groupIntroMarkdown": "\",
+    "groupIntroMarkdown": "簡介",
     "storyBackgroundTitle": "故事背景",
-    "storyBackgroundMarkdown": "\"
+    "storyBackgroundMarkdown": "背景"
   },
   "seo": {
     "description": "艾爾莉露官方網站：群組簡介、邀請連結、QR Code、管理人員名單。",
