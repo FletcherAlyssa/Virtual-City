@@ -26,9 +26,54 @@ body {
   line-height: var(--line);
   color: var(--text);
   background:
-    radial-gradient(1200px 600px at 20% 0%, rgba(120, 170, 255, 0.12), transparent 60%),
-    radial-gradient(900px 500px at 85% 10%, rgba(150, 235, 190, 0.08), transparent 60%),
+    radial-gradient(1100px 600px at 18% 0%, rgba(255, 120, 190, 0.16), transparent 58%),
+    radial-gradient(900px 520px at 88% 10%, rgba(185, 130, 255, 0.12), transparent 60%),
+    radial-gradient(700px 460px at 40% 92%, rgba(255, 160, 220, 0.08), transparent 60%),
     linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.12;
+
+  /* Conic + radial creates a soft swirl impression */
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 120, 190, 0.22), transparent 42%),
+    conic-gradient(
+      from 180deg at 50% 42%,
+      rgba(255, 120, 190, 0.00),
+      rgba(255, 120, 190, 0.10),
+      rgba(185, 130, 255, 0.10),
+      rgba(255, 120, 190, 0.00)
+    );
+
+  filter: blur(10px) saturate(115%);
+  transform-origin: 50% 42%;
+  animation: hypno-rotate 26s linear infinite;
+}
+
+/* Ensure content stays above background overlay */
+.topbar,
+main,
+footer,
+.modal,
+.admin {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes hypno-rotate {
+  from { transform: rotate(0deg) scale(1.02); }
+  to   { transform: rotate(360deg) scale(1.02); }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
 }
 
 img {
@@ -227,6 +272,10 @@ html[data-theme="light"] .topbar {
   background: var(--panel);
   border-radius: var(--r-3);
   box-shadow: var(--shadow-1);
+
+  /* subtle accent edge */
+  outline: 1px solid rgba(255, 120, 190, 0.08);
+  outline-offset: 0;
 }
 .card--content {
   padding: 0;
@@ -314,11 +363,10 @@ html[data-theme="light"] .topbar {
   transform: translateY(1px);
 }
 .btn--primary {
-  border-color: rgba(120, 170, 255, 0.35);
-  background: rgba(120, 170, 255, 0.16);
+  box-shadow: 0 10px 26px rgba(255, 120, 190, 0.14);
 }
 .btn--primary:hover {
-  background: rgba(120, 170, 255, 0.22);
+  box-shadow: 0 12px 34px rgba(255, 120, 190, 0.20);
 }
 .btn--secondary {
   border-color: rgba(255, 255, 255, 0.18);
@@ -552,6 +600,11 @@ html[data-theme="light"] .topbar {
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
+}
+.field__input:focus {
+  border-color: rgba(255, 120, 190, 0.40);
+  box-shadow: 0 0 0 3px rgba(255, 120, 190, 0.18);
+  outline: none;
 }
 textarea.field__input {
   resize: vertical;
