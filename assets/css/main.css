@@ -35,28 +35,56 @@ body {
 body::before {
   content: "";
   position: fixed;
-  inset: -20%;
+  inset: -25%;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.12;
 
-  /* Conic + radial creates a soft swirl impression */
   background:
-    radial-gradient(circle at 50% 42%, rgba(255, 120, 190, 0.22), transparent 42%),
+    radial-gradient(circle at 50% 42%,
+      rgba(255, 120, 190, 0.26),
+      transparent 44%
+    ),
     conic-gradient(
       from 180deg at 50% 42%,
       rgba(255, 120, 190, 0.00),
-      rgba(255, 120, 190, 0.10),
-      rgba(185, 130, 255, 0.10),
+      rgba(255, 120, 190, 0.12),
+      rgba(185, 130, 255, 0.12),
+      rgba(255, 160, 220, 0.10),
       rgba(255, 120, 190, 0.00)
     );
 
-  filter: blur(10px) saturate(115%);
+  filter: blur(12px) saturate(120%);
+  opacity: 0.16;
   transform-origin: 50% 42%;
-  animation: hypno-rotate 26s linear infinite;
+  animation: hypno-rotate 22s linear infinite;
 }
 
-/* Ensure content stays above background overlay */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -25%;
+  pointer-events: none;
+  z-index: 0;
+
+  background:
+    repeating-radial-gradient(
+      circle at 50% 42%,
+      rgba(255, 120, 190, 0.00) 0px,
+      rgba(255, 120, 190, 0.00) 18px,
+      rgba(185, 130, 255, 0.10) 22px,
+      rgba(255, 120, 190, 0.00) 30px
+    ),
+    radial-gradient(circle at 50% 42%,
+      rgba(185, 130, 255, 0.14),
+      transparent 58%
+    );
+
+  filter: blur(8px) saturate(115%);
+  opacity: 0.10;
+  transform-origin: 50% 42%;
+  animation: hypno-counter 34s linear infinite, hypno-breathe 6.8s ease-in-out infinite;
+}
+
 .topbar,
 main,
 footer,
@@ -71,9 +99,19 @@ footer,
   to   { transform: rotate(360deg) scale(1.02); }
 }
 
-/* Respect reduced motion */
+@keyframes hypno-counter {
+  from { transform: rotate(0deg) scale(1.00); }
+  to   { transform: rotate(-360deg) scale(1.00); }
+}
+
+@keyframes hypno-breathe {
+  0%, 100% { opacity: 0.09; transform: scale(1.00); }
+  50%      { opacity: 0.13; transform: scale(1.015); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  body::before { animation: none; }
+  body::before,
+  body::after { animation: none; }
 }
 
 img {
